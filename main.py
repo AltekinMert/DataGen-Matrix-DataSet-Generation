@@ -216,26 +216,66 @@ def generate_new_matrix():
         traceback.print_exc()
         messagebox.showerror("Error", f"An error occurred: {e}")
 
-def scale_matrix(matrix, desired_rows, desired_cols):
-    # Create a new lil_matrix with the desired dimensions
-    new_matrix = sp.lil_matrix((desired_rows, desired_cols))
+def scale_matrix(matrix, desired_rows, desired_cols, tol=1e-4, max_iters=100):
+    """
+    Scale a sparse matrix to achieve balanced row and column norms close to 1, 
+    and resize it to the desired dimensions.
+    
+    Parameters:
+    - matrix: scipy.sparse.csr_matrix, the original matrix to scale
+    - desired_rows: int, target number of rows in the scaled matrix
+    - desired_cols: int, target number of columns in the scaled matrix
+    - tol: float, tolerance level for convergence (default: 1e-4)
+    - max_iters: int, maximum number of scaling iterations (default: 100)
+    
+    Returns:
+    - scaled_matrix: scipy.sparse.csr_matrix, scaled and resized matrix
+    """
+    # Initialize a matrix of desired size with the values from the original matrix
+    scaled_matrix = sp.lil_matrix((desired_rows, desired_cols))
 
-    # Get the original matrix's shape
+    # Define scaling factors
     original_rows, original_cols = matrix.shape
-
-    # Determine the scaling factors
     row_scale = desired_rows / original_rows
     col_scale = desired_cols / original_cols
 
-    # Fill the new matrix with values from the original matrix
+    # Place values into the new scaled matrix using scaling factors
     for i, j in zip(*matrix.nonzero()):
         new_i = int(i * row_scale)
         new_j = int(j * col_scale)
         if new_i < desired_rows and new_j < desired_cols:
-            new_matrix[new_i, new_j] = matrix[i, j]
+            scaled_matrix[new_i, new_j] = matrix[i, j]
 
-    # Convert back to csr_matrix for efficient operations
-    return new_matrix.tocsr()
+    # Convert to CSR for efficient row/column operations
+    scaled_matrix = scaled_matrix.tocsr()
+
+    # Iteratively adjust row and column norms
+    for _ in range(max_iters):
+        # Row and column norms
+        row_norms = np.array(scaled_matrix.sum(axis=1)).flatten()
+        col_norms = np.array(scaled_matrix.sum(axis=0)).flatten()
+        
+        # Compute scaling factors
+        row_scaling_factors = np.sqrt(1.0 / (row_norms + 1e-10))
+        col_scaling_factors = np.sqrt(1.0 / (col_norms + 1e-10))
+        
+        # Scale rows
+        for i in range(desired_rows):
+            scaled_matrix.data[scaled_matrix.indptr[i]:scaled_matrix.indptr[i + 1]] *= row_scaling_factors[i]
+        
+        # Scale columns
+        scaled_matrix = scaled_matrix.transpose().tocsr()
+        for i in range(desired_cols):
+            scaled_matrix.data[scaled_matrix.indptr[i]:scaled_matrix.indptr[i + 1]] *= col_scaling_factors[i]
+        scaled_matrix = scaled_matrix.transpose().tocsr()
+
+        # Check convergence (difference in norms close to zero)
+        max_row_diff = np.abs(row_norms - 1).max()
+        max_col_diff = np.abs(col_norms - 1).max()
+        if max(max_row_diff, max_col_diff) < tol:
+            break
+
+    return scaled_matrix
 
 # Create the main window
 root = create_main_window()
