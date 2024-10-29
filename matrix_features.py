@@ -71,11 +71,31 @@ def compute_features(matrix):
             row_std[i] = 0
             row_median[i] = 0
 
-    features['row_min'] = row_min
-    features['row_max'] = row_max
-    features['row_mean'] = row_mean
-    features['row_std'] = row_std
-    features['row_median'] = row_median
+    # Summarize per-row statistics
+    features['row_min_min'] = row_min.min()
+    features['row_min_max'] = row_min.max()
+    features['row_min_mean'] = row_min.mean()
+    features['row_min_std'] = row_min.std()
+
+    features['row_max_min'] = row_max.min()
+    features['row_max_max'] = row_max.max()
+    features['row_max_mean'] = row_max.mean()
+    features['row_max_std'] = row_max.std()
+
+    features['row_mean_min'] = row_mean.min()
+    features['row_mean_max'] = row_mean.max()
+    features['row_mean_mean'] = row_mean.mean()
+    features['row_mean_std'] = row_mean.std()
+
+    features['row_std_min'] = row_std.min()
+    features['row_std_max'] = row_std.max()
+    features['row_std_mean'] = row_std.mean()
+    features['row_std_std'] = row_std.std()
+
+    features['row_median_min'] = row_median.min()
+    features['row_median_max'] = row_median.max()
+    features['row_median_mean'] = row_median.mean()
+    features['row_median_std'] = row_median.std()
 
     # Per-column statistics
     csc_matrix = matrix.tocsc()
@@ -101,11 +121,31 @@ def compute_features(matrix):
             col_std[j] = 0
             col_median[j] = 0
 
-    features['col_min'] = col_min
-    features['col_max'] = col_max
-    features['col_mean'] = col_mean
-    features['col_std'] = col_std
-    features['col_median'] = col_median
+    # Summarize per-column statistics
+    features['col_min_min'] = col_min.min()
+    features['col_min_max'] = col_min.max()
+    features['col_min_mean'] = col_min.mean()
+    features['col_min_std'] = col_min.std()
+
+    features['col_max_min'] = col_max.min()
+    features['col_max_max'] = col_max.max()
+    features['col_max_mean'] = col_max.mean()
+    features['col_max_std'] = col_max.std()
+
+    features['col_mean_min'] = col_mean.min()
+    features['col_mean_max'] = col_mean.max()
+    features['col_mean_mean'] = col_mean.mean()
+    features['col_mean_std'] = col_mean.std()
+
+    features['col_std_min'] = col_std.min()
+    features['col_std_max'] = col_std.max()
+    features['col_std_mean'] = col_std.mean()
+    features['col_std_std'] = col_std.std()
+
+    features['col_median_min'] = col_median.min()
+    features['col_median_max'] = col_median.max()
+    features['col_median_mean'] = col_median.mean()
+    features['col_median_std'] = col_median.std()
 
     # Average distance of nonzero elements to the diagonal
     row_indices, col_indices = matrix.nonzero()
@@ -143,17 +183,15 @@ def compute_features(matrix):
 
     return features
 
+
 def compute_average_features(features_list):
     # Compute average of numeric features
     average_features = {}
     keys = features_list[0].keys()
     for key in keys:
-        if isinstance(features_list[0][key], (int, float, np.number, np.ndarray)):
-            values = [feat[key] for feat in features_list]
-            if isinstance(features_list[0][key], np.ndarray):
-                average_features[key] = np.mean(values, axis=0)
-            else:
-                average_features[key] = np.mean(values)
+        if isinstance(features_list[0][key], (int, float, np.number)):
+            average_features[key] = np.mean([feat[key] for feat in features_list])
         else:
             average_features[key] = features_list[0][key]
     return average_features
+

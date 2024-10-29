@@ -139,6 +139,8 @@ def show_features_window():
             value = f"{value:.4f}"
         elif isinstance(value, bool):
             value = 'Yes' if value else 'No'
+        else:
+            value = str(value)
         tree.insert('', tk.END, values=(key, value))
 
     scrollbar = ttk.Scrollbar(features_frame, orient=tk.VERTICAL, command=tree.yview)
@@ -151,6 +153,8 @@ def show_features_window():
         matrix_image_frame = tk.Frame(features_frame, bg="white", relief="sunken", width=400, height=400)
         matrix_image_frame.pack(side=tk.RIGHT, expand=True, fill=tk.BOTH, padx=5, pady=5)
         draw_matrix_image(loaded_matrices[0], matrix_image_frame)
+
+
 
 def generate_new_matrix():
     global loaded_matrices, computed_features_list
