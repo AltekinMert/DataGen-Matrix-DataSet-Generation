@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, ttk, simpledialog
 from gui import (
     create_main_window,
     create_directory_frame,
@@ -277,6 +277,37 @@ def scale_matrix(matrix, desired_rows, desired_cols, tol=1e-4, max_iters=100):
 
     return scaled_matrix
 
+def test_scale_matrix():
+    # Function to test the scale_matrix function
+    if len(loaded_matrices) == 0:
+        messagebox.showerror("No Matrices Loaded", "Please load matrices to test scaling.")
+        return
+
+    # Get desired dimensions from the user
+    user_rows = simpledialog.askinteger("Input", "Enter desired number of rows:")
+    user_cols = simpledialog.askinteger("Input", "Enter desired number of columns:")
+
+    if user_rows is None or user_cols is None:
+        messagebox.showwarning("Input Error", "Please specify desired dimensions for scaling.")
+        return
+
+    try:
+        scaled_matrix = scale_matrix(loaded_matrices[0], user_rows, user_cols)
+        
+        # Ask user for output directory to save the scaled matrix
+        output_directory = filedialog.askdirectory(title="Select Directory to Save Scaled Matrix")
+        if not output_directory:
+            messagebox.showwarning("Save Cancelled", "Matrix scaling cancelled.")
+            return
+
+        # Save the scaled matrix to a file
+        output_file_path = os.path.join(output_directory, "scaled_matrix.mtx")
+        scipy.io.mmwrite(output_file_path, scaled_matrix)
+
+        messagebox.showinfo("Success", f"Matrix scaled successfully and saved to {output_file_path}.")
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred while scaling: {e}")
+
 # Create the main window
 root = create_main_window()
 
@@ -286,7 +317,9 @@ file_listbox = create_file_listbox(root)
 rows_entry, cols_entry = create_dimension_input_frame(root)
 generate_button, inspect_button = create_buttons(root, load_selected_files, generate_new_matrix, show_features_window)
 metadata_frame, name_label, id_label, date_label, author_label, ed_label, kind_label = create_metadata_frame(root)
-#matrix_image_frame = create_matrix_image_frame(metadata_frame)
+matrix_image_frame = create_matrix_image_frame(metadata_frame)
+scale_button = tk.Button(root, text="Scale Matrix", command=test_scale_matrix)  # Add the Scale button
+scale_button.pack()  # Adjust the packing as necessary for your layout
 
 # Run the application
 root.mainloop()
