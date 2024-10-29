@@ -76,10 +76,6 @@ def load_selected_files():
         inspect_button.config(state=tk.NORMAL)
         generate_button.config(state=tk.NORMAL)
 
-        draw_matrix_image(matrices[0])
-    else:
-        messagebox.showwarning("Selection Error", "Please select files from the list.")
-
 def extract_metadata(file_path):
     metadata = {}
     with open(file_path, 'r') as file:
@@ -102,12 +98,12 @@ def update_metadata_labels(metadata):
     ed_label.config(text=f"Ed: {metadata.get('ed', '-')}")
     kind_label.config(text=f"Kind: {metadata.get('kind', '-')}")
 
-def draw_matrix_image(matrix):
-    for widget in matrix_image_frame.winfo_children():
+def draw_matrix_image(matrix, frame):
+    for widget in frame.winfo_children():
         widget.destroy()
 
-    frame_width = matrix_image_frame.winfo_width()
-    frame_height = matrix_image_frame.winfo_height()
+    frame_width = frame.winfo_width()
+    frame_height = frame.winfo_height()
     dpi = 100  
     fig_width = frame_width / dpi
     fig_height = frame_height / dpi
@@ -118,17 +114,20 @@ def draw_matrix_image(matrix):
     ax.set_title('Matrix Visualization')
     ax.axis('off')  
 
-    canvas = FigureCanvasTkAgg(fig, master=matrix_image_frame)
+    canvas = FigureCanvasTkAgg(fig, master=frame)
     canvas.draw()
-    canvas.get_tk_widget().grid(row=0, column=0, sticky='nsew')
-    matrix_image_frame.grid_propagate(False)
+    canvas.get_tk_widget().pack(expand=True, fill=tk.BOTH)
+    frame.grid_propagate(False)
 
 def show_features_window():
     features_window = tk.Toplevel(root)
     features_window.title("Matrix Features")
-    features_window.geometry("600x400")
+    features_window.geometry("800x600")
 
-    tree = ttk.Treeview(features_window, columns=('Feature', 'Value'), show='headings')
+    features_frame = tk.Frame(features_window)
+    features_frame.pack(expand=True, fill=tk.BOTH)
+
+    tree = ttk.Treeview(features_frame, columns=('Feature', 'Value'), show='headings')
     tree.heading('Feature', text='Feature')
     tree.heading('Value', text='Value')
     tree.column('Feature', width=300)
@@ -142,11 +141,16 @@ def show_features_window():
             value = 'Yes' if value else 'No'
         tree.insert('', tk.END, values=(key, value))
 
-    scrollbar = ttk.Scrollbar(features_window, orient=tk.VERTICAL, command=tree.yview)
+    scrollbar = ttk.Scrollbar(features_frame, orient=tk.VERTICAL, command=tree.yview)
     tree.configure(yscroll=scrollbar.set)
     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-    tree.pack(expand=True, fill=tk.BOTH)
+    tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+
+    if loaded_matrices:
+        matrix_image_frame = tk.Frame(features_frame, bg="white", relief="sunken", width=400, height=400)
+        matrix_image_frame.pack(side=tk.RIGHT, expand=True, fill=tk.BOTH, padx=5, pady=5)
+        draw_matrix_image(loaded_matrices[0], matrix_image_frame)
 
 def generate_new_matrix():
     global loaded_matrices, computed_features_list
@@ -204,7 +208,7 @@ def generate_new_matrix():
         loaded_matrices = [generated_matrix]
         computed_features_list = [generated_features]
 
-        draw_matrix_image(generated_matrix)
+        draw_matrix_image(generated_matrix, matrix_image_frame)
 
         messagebox.showinfo("Success", f"New matrix generated and saved to {output_file_path}.")
 
@@ -242,7 +246,7 @@ file_listbox = create_file_listbox(root)
 rows_entry, cols_entry = create_dimension_input_frame(root)
 generate_button, inspect_button = create_buttons(root, load_selected_files, generate_new_matrix, show_features_window)
 metadata_frame, name_label, id_label, date_label, author_label, ed_label, kind_label = create_metadata_frame(root)
-matrix_image_frame = create_matrix_image_frame(metadata_frame)
+#matrix_image_frame = create_matrix_image_frame(metadata_frame)
 
 # Run the application
 root.mainloop()
