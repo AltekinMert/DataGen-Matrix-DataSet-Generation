@@ -1,14 +1,10 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
-import scipy.io
-import os
-import numpy as np
-import scipy.sparse as sp
+from tkinter import ttk, filedialog, messagebox
 
 def create_main_window():
     root = tk.Tk()
     root.title("Matrix GUI")
-    root.geometry("800x700")
+    root.geometry("800x700")  # Adjusted window size
     return root
 
 def create_directory_frame(root, select_directory):
@@ -74,8 +70,9 @@ def create_metadata_frame(root):
 
     metadata_frame = tk.LabelFrame(content_frame, text="Matrix Metadata", width=400, height=400)
     metadata_frame.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
-    metadata_frame.grid_propagate(False)
+    metadata_frame.grid_propagate(False)  # Prevent resizing
 
+    # Create labels for metadata
     name_label = tk.Label(metadata_frame, text="Name: -", anchor='w')
     name_label.grid(row=0, column=0, sticky='w', padx=10, pady=2)
 
