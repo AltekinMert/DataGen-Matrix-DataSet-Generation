@@ -194,4 +194,3 @@ def compute_average_features(features_list):
         else:
             average_features[key] = features_list[0][key]
     return average_features
-
