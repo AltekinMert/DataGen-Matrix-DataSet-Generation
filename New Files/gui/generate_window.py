@@ -2,7 +2,7 @@ import os
 import tkinter as tk
 from gui.window_utils import *
 
-# Buttonların konum ve dimensionlarını elle kodladın - düzelt
+# Buttonlıarın konum ve dimensionlarını elle kodladın - düzelt
 
 BUTTON_WIDTH = 300
 BUTTON_HEIGHT = 50
@@ -19,7 +19,7 @@ def open_generate_window(root):
     def update_file_list(folder_path):
         file_list.delete(0, tk.END)  # Clear the current list
         if folder_path and os.path.isdir(folder_path):
-            files = os.listdir(folder_path)  # List all files in the folder
+            files = [file for file in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, file))]
             for file in files:
                 file_list.insert(tk.END, file)  # Add each file to the Listbox
 
@@ -35,8 +35,8 @@ def open_generate_window(root):
         button_width=BUTTON_WIDTH, button_height=BUTTON_HEIGHT
     )
 
-    # Connect folder selector callback
-    window.bind("<<FolderSelected>>", lambda _: folder_selected_callback())
+    # Bind the folder selection callback directly
+    folder_var.trace_add("write", lambda *args: folder_selected_callback())
 
     # Add a listbox to display files
     file_list = tk.Listbox(window, font=(FONT, FONT_SIZE))
