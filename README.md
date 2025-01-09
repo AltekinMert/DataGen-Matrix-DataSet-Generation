@@ -46,7 +46,7 @@ python -m gui.main_window.py
 - [x] Implement matrix expansion algorithms.
 - [x] Add GUI for matrix manipulation.
 - [ ] Enable batch processing of multiple matrices.
-- [ ] Enhance matrix visualization with more detailed graphics.
+- [x] Enhance matrix visualization with more detailed graphics.
 - [ ] Integrate machine learning models for advanced matrix generation.
 - [ ] Add support for exporting matrices in additional formats.
 - [ ] Optimize performance for handling ultra-large matrices.
