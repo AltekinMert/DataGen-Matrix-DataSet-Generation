@@ -22,6 +22,7 @@ def open_generate_window(root):
             files = [file for file in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, file))]
             for file in files:
                 file_list.insert(tk.END, file)  # Add each file to the Listbox
+            file_list.folder_path = folder_path  # Store the folder path as an attribute of the Listbox
 
     # Add folder selector
     def folder_selected_callback():
@@ -42,10 +43,10 @@ def open_generate_window(root):
     file_list = tk.Listbox(window, font=(FONT, FONT_SIZE))
     file_list.place(x=50, y=150, width=BUTTON_WIDTH + 100, height=BUTTON_HEIGHT * 3)
 
-    button = tk.Button(window, text="Upload the file", font=(FONT, FONT_SIZE))
+    button = tk.Button(window, text="Upload the file", font=(FONT, FONT_SIZE), command=lambda: upload_selected_file(file_list))
     button.place(x=500, y=150, width=BUTTON_WIDTH / 2, height=60)
 
-    button = tk.Button(window, text="Inspect the matrix", font=(FONT, FONT_SIZE))
+    button = tk.Button(window, text="Inspect the matrix", font=(FONT, FONT_SIZE), command=lambda: open_matrix_inspection_window(window))
     button.place(x=500, y=240, width=BUTTON_WIDTH / 2, height=60)
 
     # Create three entry fields with placeholders

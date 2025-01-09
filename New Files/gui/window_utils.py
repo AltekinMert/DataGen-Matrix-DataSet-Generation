@@ -1,5 +1,25 @@
 import tkinter as tk
+import tkinter.ttk as ttk
 from tkinter import filedialog
+import os
+from functional.mtx_inspection import (
+    load_mtx_file,
+    get_basic_properties,
+    get_symmetry,
+    get_nonzeros_per_row_stats,
+    get_nonzeros_per_col_stats,
+    get_nonzero_value_stats,
+    get_row_statistics,
+    get_col_statistics,
+    get_distance_to_diagonal,
+    get_structural_unsymmetry,
+    get_matrix_norms,
+    get_condition_number
+)
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.colors as mcolors
+import numpy as np
 
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
@@ -108,7 +128,6 @@ def add_folder_selector(parent, button_text, pos_x, pos_y, button_width, button_
 
     return folder_var
 
-
 def add_file_selector(parent, button_text, pos_x, pos_y, button_width, button_height):
     """
     Adds a file selector button and a label to display the selected file.
@@ -156,3 +175,232 @@ def add_file_selector(parent, button_text, pos_x, pos_y, button_width, button_he
     button.bind("<Leave>", on_leave)
 
     return file_var
+
+uploaded_file_path = None  # Global variable to store the uploaded file path
+
+def upload_selected_file(file_listbox):
+    """
+    Handles the upload of the selected file from the listbox.
+
+    Parameters:
+        file_listbox (tk.Listbox): The Listbox widget containing the file list.
+
+    Returns:
+        str: The path of the uploaded file, or None if no file is selected.
+    """
+    global uploaded_file_path
+    try:
+        selected_index = file_listbox.curselection()  # Get the selected item index
+        if not selected_index:
+            tk.messagebox.showwarning("No File Selected", "Please select a file from the list.")
+            return None
+        
+        selected_file = file_listbox.get(selected_index)  # Get the selected file name
+        folder_path = file_listbox.folder_path  # Custom attribute to store folder path
+
+        if not folder_path:
+            tk.messagebox.showerror("Folder Error", "No folder associated with the listbox.")
+            return None
+
+        # Construct the full path of the selected file
+        uploaded_file_path = os.path.join(folder_path, selected_file)
+        tk.messagebox.showinfo("File Uploaded", f"File uploaded: {selected_file}")
+
+        return uploaded_file_path
+    except Exception as e:
+        tk.messagebox.showerror("Upload Error", f"An error occurred: {e}")
+        return None
+
+def open_matrix_graph_window(table_window, matrix):
+    """
+    Opens a new window to display the graph of the matrix using matplotlib.
+
+    Parameters:
+        table_window (tk.Toplevel): The table window to return to on close.
+        matrix (np.ndarray): The matrix to be visualized as a graph.
+    """
+    # Create a new Toplevel window for the graph
+    graph_window = tk.Toplevel()
+    graph_window.geometry(WINDOW_DIM)
+    graph_window.title("Matrix Graph")
+
+    # Setup close behavior to return to the table view
+    def on_close():
+        table_window.deiconify()  # Show the table window
+        graph_window.destroy()  # Destroy the graph window
+
+    graph_window.protocol("WM_DELETE_WINDOW", on_close)
+
+    # Hide the table window
+    table_window.withdraw()
+
+    # Create the graph using matplotlib
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.spy(matrix, markersize=1)  # Use the spy plot for matrix visualization
+    ax.set_title("Matrix Graph", fontsize=14)
+    ax.set_xlabel("Columns", fontsize=12)
+    ax.set_ylabel("Rows", fontsize=12)
+
+    # Embed the matplotlib figure into the tkinter window
+    canvas = FigureCanvasTkAgg(fig, master=graph_window)
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+    canvas.draw()
+
+def open_matrix_heatmap_window(table_window, matrix):
+    """
+    Opens a new window to display the heatmap of the matrix using matplotlib.
+    Normalizes the matrix values between 0 and 1 before visualization.
+
+    Parameters:
+        table_window (tk.Toplevel): The table window to return to on close.
+        matrix (np.ndarray): The matrix to be visualized as a heatmap.
+    """
+    # Create a new Toplevel window for the heatmap
+    heatmap_window = tk.Toplevel()
+    heatmap_window.geometry(WINDOW_DIM)
+    heatmap_window.title("Matrix Heatmap")
+
+    # Setup close behavior to return to the table view
+    def on_close():
+        table_window.deiconify()  # Show the table window
+        heatmap_window.destroy()  # Destroy the heatmap window
+
+    heatmap_window.protocol("WM_DELETE_WINDOW", on_close)
+
+    # Hide the table window
+    table_window.withdraw()
+
+    # Normalize the matrix between 0 and 1
+    matrix_min = np.min(matrix)
+    matrix_max = np.max(matrix)
+    if matrix_max > matrix_min:  # Avoid division by zero
+        normalized_matrix = (matrix - matrix_min) / (matrix_max - matrix_min)
+    else:
+        normalized_matrix = np.zeros_like(matrix)  # If all values are the same, set to 0
+
+    # Create the heatmap using matplotlib
+    fig, ax = plt.subplots(figsize=(8, 6))
+    cax = ax.matshow(normalized_matrix, cmap='viridis')  # Use a color map for visualization
+    fig.colorbar(cax)  # Add a color bar to indicate intensity
+
+    ax.set_title("Matrix Heatmap", pad=20, fontsize=14)
+    ax.set_xlabel("Columns", fontsize=12)
+    ax.set_ylabel("Rows", fontsize=12)
+
+    # Embed the matplotlib figure into the tkinter window
+    canvas = FigureCanvasTkAgg(fig, master=heatmap_window)
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+    canvas.draw()
+
+def open_matrix_inspection_window(generate_window):
+    """
+    Opens a new window for inspecting a matrix and populates it with extracted properties.
+
+    Parameters:
+        generate_window (tk.Toplevel): The generate window to return to on close.
+    """
+    global uploaded_file_path
+    if not uploaded_file_path:
+        tk.messagebox.showwarning("No File Uploaded", "Please upload a file before inspecting the matrix.")
+        return
+
+    # Load the matrix from the uploaded file
+    matrix = load_mtx_file(uploaded_file_path)
+    if matrix is None:
+        tk.messagebox.showerror("Error", "Failed to load the matrix from the uploaded file.")
+        return
+
+    # Create the inspection window
+    inspection_window = tk.Toplevel()
+    inspection_window.geometry(WINDOW_DIM)
+    inspection_window.title("Matrix Inspection")
+
+    # Setup close behavior to return to generate_window
+    def on_close():
+        generate_window.deiconify()  # Show the generate window
+        inspection_window.destroy()  # Destroy the inspection window
+
+    inspection_window.protocol("WM_DELETE_WINDOW", on_close)
+
+    # Hide the generate_window
+    generate_window.withdraw()
+
+    # Create a table (Treeview) in the new window
+    tree = ttk.Treeview(inspection_window, show="headings")  # Remove the ID column
+    tree["columns"] = ("Property", "Value")
+    tree.heading("Property", text="Property")
+    tree.heading("Value", text="Value")
+    tree.column("Property", width=300)
+    tree.column("Value", width=200)
+
+    # Formal property names mapping
+    formal_property_names = {
+        "num_rows": "Number of Rows",
+        "num_cols": "Number of Columns",
+        "num_nonzeros": "Number of Nonzeros",
+        "density_percent": "Density (%)",
+        "pattern_symmetry": "Pattern Symmetry",
+        "numerical_symmetry": "Numerical Symmetry",
+        "nonzeros_per_row_min": "Minimum Nonzeros per Row",
+        "nonzeros_per_row_max": "Maximum Nonzeros per Row",
+        "nonzeros_per_row_avg": "Average Nonzeros per Row",
+        "nonzeros_per_row_std": "Standard Deviation of Nonzeros per Row",
+        "nonzeros_per_col_min": "Minimum Nonzeros per Column",
+        "nonzeros_per_col_max": "Maximum Nonzeros per Column",
+        "nonzeros_per_col_avg": "Average Nonzeros per Column",
+        "nonzeros_per_col_std": "Standard Deviation of Nonzeros per Column",
+        "value_min": "Minimum Value",
+        "value_max": "Maximum Value",
+        "value_avg": "Average Value",
+        "value_std": "Standard Deviation of Values",
+        "avg_distance_to_diagonal": "Average Distance to Diagonal",
+        "num_diagonals_with_nonzeros": "Number of Diagonals with Nonzeros",
+        "bandwidth": "Bandwidth",
+        "num_structurally_unsymmetric_elements": "Number of Structurally Unsymmetric Elements",
+        "norm_1": "1-Norm",
+        "norm_inf": "Infinity Norm",
+        "frobenius_norm": "Frobenius Norm",
+        "estimated_condition_number": "Estimated Condition Number",
+    }
+
+    def add_properties_to_tree(property_dict):
+        """Helper function to add properties to the Treeview."""
+        for key, value in property_dict.items():
+            formal_name = formal_property_names.get(key, key.replace("_", " ").title())
+            tree.insert("", "end", values=(formal_name, value))
+
+    # Extract properties and populate the table
+    add_properties_to_tree(get_basic_properties(matrix))
+    add_properties_to_tree(get_symmetry(matrix))
+    add_properties_to_tree(get_nonzeros_per_row_stats(matrix))
+    add_properties_to_tree(get_nonzeros_per_col_stats(matrix))
+    add_properties_to_tree(get_nonzero_value_stats(matrix))
+    add_properties_to_tree(get_distance_to_diagonal(matrix))
+    add_properties_to_tree(get_structural_unsymmetry(matrix))
+    add_properties_to_tree(get_matrix_norms(matrix))
+    add_properties_to_tree(get_condition_number(matrix))
+
+    # Position the table in the window
+    tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+    # Add buttons below the table
+    def on_show_matrix_graph():
+        open_matrix_graph_window(inspection_window, matrix)
+
+    def on_show_matrix_heatmap():
+        open_matrix_heatmap_window(inspection_window, matrix)
+
+    button_frame = tk.Frame(inspection_window)
+    button_frame.pack(fill=tk.X, padx=10, pady=10)
+
+    graph_button = tk.Button(
+        button_frame, text="Show Matrix Graph", font=(FONT, FONT_SIZE),
+        command=on_show_matrix_graph
+    )
+    graph_button.pack(side=tk.LEFT, expand=True, padx=5)
+
+    heatmap_button = tk.Button(
+        button_frame, text="Show Matrix Heatmap", font=(FONT, FONT_SIZE),
+        command=on_show_matrix_heatmap
+    )
+    heatmap_button.pack(side=tk.LEFT, expand=True, padx=5)
