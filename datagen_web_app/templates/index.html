@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Matrix Generator</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h3 class="mb-4">Matrix Generation Tool</h3>
+    <form action="/generate" method="POST" enctype="multipart/form-data">
+        <!-- Upload Matrix File -->
+        <div class="form-group">
+            <label for="matrix_upload">Upload .mtx Matrix File</label>
+            <input type="file" name="matrix_upload" class="form-control-file" id="matrix_upload" accept=".mtx" required>
+        </div>
+
+        <!-- Algorithm Selection -->
+        <div class="form-group">
+            <label for="generationAlgorithm">Select Generation Algorithm</label>
+            <select class="form-control" name="algorithm" id="generationAlgorithm">
+                <option>Wavelet Transformation</option>
+                <option>Nearest-neighbor Interpolation</option>
+                <option>Bi-linear Interpolation</option>
+                <option>Lanczos Resampling</option>
+                <option>Gaussian Pyramids</option>
+                <option>Image-based Scaling</option>
+            </select>
+        </div>
+
+        <!-- Image Resampling Method -->
+        <div class="form-group" id="imageResamplingGroup" style="display: none;">
+            <label for="imageResamplingMethod">Select Image Resampling Method</label>
+            <select class="form-control" name="image_resampling_method" id="imageResamplingMethod">
+                <option>Image.NEAREST</option>
+                <option>Image.BOX</option>
+                <option>Image.BILINEAR</option>
+                <option>Image.HAMMING</option>
+                <option>Image.BICUBIC</option>
+                <option>Image.LANCZOS</option>
+            </select>
+        </div>
+
+        <!-- Kernel Size -->
+        <div class="form-group" id="kernelSizeGroup" style="display: none;">
+            <label for="kernelSize">Kernel Size</label>
+            <input type="number" class="form-control" name="kernel_size" id="kernelSize" placeholder="e.g. 3">
+        </div>
+
+        <!-- Row / Column Inputs -->
+        <div class="form-row">
+            <div class="form-group col">
+                <label>Rows</label>
+                <input type="number" class="form-control" name="rows" placeholder="e.g. 512" required>
+            </div>
+            <div class="form-group col">
+                <label>Columns</label>
+                <input type="number" class="form-control" name="cols" placeholder="e.g. 512" required>
+            </div>
+        </div>
+
+        <!-- Checkboxes -->
+        <div class="form-group form-check">
+            <input type="checkbox" class="form-check-input" name="match_nnz" id="matchNonZeroCheck">
+            <label class="form-check-label" for="matchNonZeroCheck">Match the number of non-zero values</label>
+        </div>
+
+        <div class="form-group form-check">
+            <input type="checkbox" class="form-check-input" name="optimize" id="optimizeCheck">
+            <label class="form-check-label" for="optimizeCheck">Optimize after generation</label>
+        </div>
+
+        <button type="submit" class="btn btn-success">Generate Matrix</button>
+    </form>
+
+    <div id="visualContainer" class="mt-4">
+        <h5 id="visualTitle">Visualization of Original and Generated Matrices</h5>
+        <img src="/visualization" class="img-fluid border" alt="Matrix Visualization"
+             onerror="document.getElementById('visualContainer').style.display='none';">
+    </div>       
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
