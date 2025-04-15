@@ -19,9 +19,7 @@ def scale_sparse_matrix_wavelet(original_matrix: sp.csr_matrix, new_rows: int, n
     Generate a new matrix using wavelet transform and reconstruction.
     Processes the matrix in blocks to handle large sparse matrices efficiently.
     """
-    # Ensure dimensions are compatible with wavelet transform
-    level = 2  # Reduced from 2 to avoid boundary effects
-    block_size = 2**level
+    block_size = 2
     
     # Round dimensions to nearest multiple of block_size
     orig_rows, orig_cols = original_matrix.shape
@@ -40,57 +38,63 @@ def scale_sparse_matrix_wavelet(original_matrix: sp.csr_matrix, new_rows: int, n
     # Choose wavelet
     wavelet = 'db4'
     
+    # Calculate scaling factors
+    scale_rows = new_rows / orig_rows
+    scale_cols = new_cols / orig_cols
+    
+    # Calculate target size for each block
+    target_size = (int(block_size * scale_rows), int(block_size * scale_cols))
+    
     # Process each block
     for i in range(block_rows):
         for j in range(block_cols):
-            # Extract block
+            # Extract block as sparse matrix
             start_row = i * block_size
             start_col = j * block_size
             block = original_matrix[start_row:start_row + block_size, 
-                                  start_col:start_col + block_size].toarray()
+                                  start_col:start_col + block_size]
             
-            # Apply wavelet transform
-            coeffs = pywt.wavedec2(block, wavelet, level=level)
-            cA, (cH, cV, cD) = coeffs
+            # Skip empty blocks
+            if block.nnz == 0:
+                continue
+                
+            # Convert only non-zero elements to dense for wavelet transform
+            block_dense = np.zeros((block_size, block_size))
+            for row, col in zip(*block.nonzero()):
+                block_dense[row, col] = block[row, col]
             
-            # Calculate scaling factors
-            scale_rows = new_rows / orig_rows
-            scale_cols = new_cols / orig_cols
+            # Apply two level wavelet transform
+            coeffs = pywt.wavedec2(block_dense, wavelet, level=2)
+            cA, (cH, cV, cD), (cH2, cV2, cD2) = coeffs
             
-            # Calculate target size
-            target_size = (int(block_size * scale_rows), int(block_size * scale_cols))
+            # Add perturbation to detail coefficients (without resizing)
+            cH = perturb_details(cH)
+            cV = perturb_details(cV)
+            cD = perturb_details(cD)
+            cH2 = perturb_details(cH2)
+            cV2 = perturb_details(cV2)
+            cD2 = perturb_details(cD2)
             
-            # Resize coefficients
-            new_cA = zoom(cA, (target_size[0]/cA.shape[0], target_size[1]/cA.shape[1]), order=2)
-            new_cH = zoom(cH, (target_size[0]/cH.shape[0], target_size[1]/cH.shape[1]), order=2)
-            new_cV = zoom(cV, (target_size[0]/cV.shape[0], target_size[1]/cV.shape[1]), order=2)
-            new_cD = zoom(cD, (target_size[0]/cD.shape[0], target_size[1]/cD.shape[1]), order=2)
-            
-            # Add perturbation to detail coefficients
-            new_cH = perturb_details(new_cH)
-            new_cV = perturb_details(new_cV)
-            new_cD = perturb_details(new_cD)
-            
-            # Reconstruct block
-            new_coeffs = [new_cA, (new_cH, new_cV, new_cD)]
+            # Reconstruct block with original coefficient sizes
+            new_coeffs = [cA, (cH, cV, cD), (cH2, cV2, cD2)]
             reconstructed = pywt.waverec2(new_coeffs, wavelet)
             
-            # Ensure reconstructed block matches target size
-            if reconstructed.shape != target_size:
-                reconstructed = zoom(reconstructed, 
-                                  (target_size[0]/reconstructed.shape[0], 
-                                   target_size[1]/reconstructed.shape[1]), 
-                                  order=1)
+            # Now resize the reconstructed block to target size
+            reconstructed = zoom(reconstructed, 
+                              (target_size[0]/reconstructed.shape[0], 
+                               target_size[1]/reconstructed.shape[1]), 
+                              order=1)
             
             # Calculate new block position
             new_start_row = int(start_row * scale_rows)
             new_start_col = int(start_col * scale_cols)
             
-            # Add non-zero elements to result
+            # Add non-zero elements to result (with thresholding)
+            threshold = 1e-10
             for r in range(min(target_size[0], new_rows - new_start_row)):
                 for c in range(min(target_size[1], new_cols - new_start_col)):
                     val = reconstructed[r, c]
-                    if abs(val) > 1e-10:  # Threshold for sparsity
+                    if abs(val) > threshold:
                         row_idx = new_start_row + r
                         col_idx = new_start_col + c
                         if row_idx < new_rows and col_idx < new_cols:
