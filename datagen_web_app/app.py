@@ -69,6 +69,15 @@ def generate():
             kernel_size = int(raw_kernel)
 
     image_resampling = request.form.get('image_resampling_method', 'Image.BOX')
+    wavelet_type = request.form.get('wavelet_type', 'db4')
+    block_size = 2
+    if algorithm == "Wavelet Transformation":
+        raw_block_size = request.form.get('block_size', '')
+        if raw_block_size.strip().isdigit():
+            block_size = int(raw_block_size)
+            # Ensure block size is even
+            if block_size % 2 != 0:
+                block_size += 1
 
     # 3. Load the matrix
     matrix = load_matrix(upload_path)
@@ -82,7 +91,7 @@ def generate():
     # 5. Dispatch based on algorithm
     result = csr_matrix((0, 0))  # safe init
     if algorithm == "Wavelet Transformation":
-        result = scale_sparse_matrix_wavelet(matrix, rows, cols)
+        result = scale_sparse_matrix_wavelet(matrix, rows, cols, wavelet_type, block_size)
     elif algorithm == "Nearest-neighbor Interpolation":
         result = scale_sparse_matrix_nearest(matrix, rows, output_path, match_nnz)
     elif algorithm == "Bi-linear Interpolation":

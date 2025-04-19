@@ -14,12 +14,32 @@ def perturb_details(coeff: np.ndarray) -> np.ndarray:
     noise = np.random.normal(0, np.std(coeff) * 0.1, coeff.shape)
     return coeff + noise
 
-def scale_sparse_matrix_wavelet(original_matrix: sp.csr_matrix, new_rows: int, new_cols: int) -> sp.csr_matrix:
+def scale_sparse_matrix_wavelet(original_matrix: sp.csr_matrix, new_rows: int, new_cols: int, wavelet_type: str = 'db4', block_size: int = 2) -> sp.csr_matrix:
     """
     Generate a new matrix using wavelet transform and reconstruction.
     Processes the matrix in blocks to handle large sparse matrices efficiently.
+    
+    Parameters:
+    -----------
+    original_matrix : scipy.sparse.csr_matrix
+        Input sparse matrix to be scaled
+    new_rows : int
+        Number of rows in the output matrix
+    new_cols : int
+        Number of columns in the output matrix
+    wavelet_type : str
+        Type of wavelet to use (e.g., 'db4', 'sym4', 'coif3')
+    block_size : int
+        Size of the blocks to process (must be even)
+        
+    Returns:
+    --------
+    scipy.sparse.csr_matrix
+        Scaled sparse matrix
     """
-    block_size = 2
+    # Ensure block_size is even
+    if block_size % 2 != 0:
+        block_size += 1
     
     # Round dimensions to nearest multiple of block_size
     orig_rows, orig_cols = original_matrix.shape
@@ -34,9 +54,6 @@ def scale_sparse_matrix_wavelet(original_matrix: sp.csr_matrix, new_rows: int, n
     result_data = []
     result_rows = []
     result_cols = []
-    
-    # Choose wavelet
-    wavelet = 'db4'
     
     # Calculate scaling factors
     scale_rows = new_rows / orig_rows
@@ -64,7 +81,7 @@ def scale_sparse_matrix_wavelet(original_matrix: sp.csr_matrix, new_rows: int, n
                 block_dense[row, col] = block[row, col]
             
             # Apply two level wavelet transform
-            coeffs = pywt.wavedec2(block_dense, wavelet, level=2)
+            coeffs = pywt.wavedec2(block_dense, wavelet_type, level=2)
             cA, (cH, cV, cD), (cH2, cV2, cD2) = coeffs
             
             # Add perturbation to detail coefficients (without resizing)
@@ -77,7 +94,7 @@ def scale_sparse_matrix_wavelet(original_matrix: sp.csr_matrix, new_rows: int, n
             
             # Reconstruct block with original coefficient sizes
             new_coeffs = [cA, (cH, cV, cD), (cH2, cV2, cD2)]
-            reconstructed = pywt.waverec2(new_coeffs, wavelet)
+            reconstructed = pywt.waverec2(new_coeffs, wavelet_type)
             
             # Now resize the reconstructed block to target size
             reconstructed = zoom(reconstructed, 
